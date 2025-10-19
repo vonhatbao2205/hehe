@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gửi đến em — 20/10</title>
+
+    <!-- Google font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Nunito:wght@300;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --bg: #fff7f9;
+        --pink-1: #ffd7e8;
+        --pink-2: #ffb0d1;
+        --rose: #ff6fa3;
+        --gold: #ffd9a6;
+        --text: #5a3825;
+        --soft-shadow: 0 8px 28px rgba(235, 150, 190, 0.14);
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: linear-gradient(180deg, #fffafc 0%, #fff2f6 100%);
+        font-family: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial;
+        color: var(--text);
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* Stage and canvas layers */
+      #stage {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+      }
+      canvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        pointer-events: none;
+      }
+
+      /* Envelope overlay */
+      .envelope-wrap {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(720px, 84vw);
+        max-width: 780px;
+        height: auto;
+        z-index: 120;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        pointer-events: none;
+      }
+
+      .envelope {
+        --w: calc(min(720px, 84vw));
+        width: var(--w);
+        height: calc(var(--w) * 0.55);
+        max-height: 420px;
+        position: relative;
+        transform-origin: center;
+        pointer-events: auto;
+        transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.32, 1), opacity 0.4s;
+        box-shadow: var(--soft-shadow);
+      }
+
+      /* Envelope body */
+      .env-body {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 12px;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 250, 253, 1),
+          rgba(255, 244, 247, 0.95)
+        );
+        border: 1px solid rgba(255, 200, 220, 0.6);
+        overflow: visible;
+      }
+
+      /* Flap (top) */
+      .env-flap {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 62%;
+        transform-origin: center top;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 230, 240, 0.98),
+          rgba(255, 210, 230, 0.96)
+        );
+        border-radius: 12px 12px 0 0;
+        box-shadow: 0 6px 18px rgba(255, 150, 190, 0.06) inset;
+        transition: transform 0.8s cubic-bezier(0.22, 0.9, 0.32, 1),
+          box-shadow 0.4s;
+        z-index: 3;
+      }
+
+      /* Back flap shadow to make open look nice */
+      .env-back {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: 40%;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 247, 250, 0.6),
+          rgba(255, 244, 247, 0.6)
+        );
+        border-radius: 0 0 12px 12px;
+        z-index: 1;
+      }
+
+      /* Inner card inside envelope (hidden until opened) */
+      .env-card {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -10%); /* slightly up under flap */
+        width: 92%;
+        height: 78%;
+        background: linear-gradient(180deg, #fffefc, #fff6f9);
+        border-radius: 10px;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+        padding: 22px 20px;
+        box-shadow: 0 6px 18px rgba(250, 200, 220, 0.06);
+        opacity: 0;
+        transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.32, 1), opacity 0.5s;
+      }
+
+      /* Heart seal */
+      .seal {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -6%);
+        width: 78px;
+        height: 72px;
+        z-index: 4;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: transform 0.28s ease, opacity 0.3s;
+        pointer-events: auto;
+      }
+      .seal .heart {
+        width: 46px;
+        height: 40px;
+        position: relative;
+        transform-origin: center;
+        animation: sealPulse 1.6s infinite cubic-bezier(0.4, 0.05, 0.6, 0.95);
+        filter: drop-shadow(0 6px 12px rgba(255, 110, 170, 0.12));
+      }
+      .seal .heart:before,
+      .seal .heart:after {
+        content: "";
+        position: absolute;
+        top: 0;
+        width: 24px;
+        height: 36px;
+        border-radius: 18px 18px 0 0;
+        background: linear-gradient(180deg, #ff8fc1, #ff6fa3);
+      }
+      .seal .heart:before {
+        left: 22px;
+        transform: rotate(-45deg);
+        transform-origin: 0 100%;
+      }
+      .seal .heart:after {
+        left: 0;
+        transform: rotate(45deg);
+        transform-origin: 100% 100%;
+      }
+
+      @keyframes sealPulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+
+      /* Open animation states */
+      .envelope.open .env-flap {
+        transform: rotateX(180deg) translateY(-8%);
+        box-shadow: 0 2px 12px rgba(255, 150, 190, 0.06);
+      }
+      .envelope.open .env-card {
+        opacity: 1;
+        transform: translate(-50%, -26%);
+      }
+      .envelope.open .seal {
+        opacity: 0;
+        transform: translate(-50%, -12%) scale(0.6) rotate(-6deg);
+      }
+
+      /* Ensure the card (main message) is visible under envelope */
+      .card {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%) scale(0.98);
+        width: min(860px, 92vw);
+        padding: 28px 30px;
+        border-radius: 20px;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.92),
+          rgba(255, 249, 250, 0.85)
+        );
+        box-shadow: var(--soft-shadow);
+        z-index: 60;
+        text-align: left;
+        backdrop-filter: blur(6px);
+        opacity: 0;
+        transition: opacity 0.6s ease,
+          transform 0.6s cubic-bezier(0.2, 0.9, 0.32, 1);
+        pointer-events: auto;
+      }
+      .card.visible {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      .title {
+        font-family: "Great Vibes", cursive;
+        font-size: 44px;
+        color: var(--rose);
+        margin: 0 0 6px 0;
+        text-shadow: 0 6px 14px rgba(255, 110, 170, 0.12);
+      }
+      .subtitle {
+        margin: 0;
+        font-size: 16px;
+        color: #6b4b3a;
+        opacity: 0.95;
+      }
+      .message {
+        margin-top: 18px;
+        font-size: 18px;
+        line-height: 1.6;
+        color: #5b4232;
+        min-height: 110px;
+      }
+      .signature {
+        display: block;
+        text-align: right;
+        margin-top: 10px;
+        font-style: italic;
+        color: #6b4b3a;
+      }
+
+      /* Start button */
+      #startBtn {
+        position: absolute;
+        left: 50%;
+        top: 70%;
+        transform: translate(-50%, -50%);
+        z-index: 200;
+        background: linear-gradient(180deg, #ffb7d6, #ff8fc1);
+        border: 0;
+        padding: 14px 22px;
+        color: white;
+        font-weight: 600;
+        border-radius: 999px;
+        box-shadow: 0 8px 20px rgba(255, 130, 170, 0.16);
+        cursor: pointer;
+        font-size: 16px;
+        transition: transform 0.18s ease, opacity 0.3s ease;
+        pointer-events: auto;
+      }
+      #startBtn:active {
+        transform: translate(-50%, -50%) scale(0.98);
+      }
+
+      /* small corner hearts decorative */
+      .corner-heart {
+        position: absolute;
+        width: 14px;
+        height: 12px;
+        transform: rotate(-10deg);
+        z-index: 55;
+      }
+
+      .glow {
+        color: #7a2b56;
+        text-shadow: 0 6px 18px rgba(250, 120, 170, 0.22),
+          0 0 8px rgba(255, 190, 220, 0.6);
+      }
+
+      @media (max-width: 700px) {
+        .envelope {
+          width: 92vw;
+          height: 48vw;
+        }
+        .card {
+          width: 94vw;
+          padding: 18px;
+          border-radius: 14px;
+        }
+        .title {
+          font-size: 34px;
+        }
+        #startBtn {
+          top: 78%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <!-- Canvas layers -->
+      <canvas id="fireworks"></canvas>
+      <canvas id="hearts"></canvas>
+      <canvas id="petals"></canvas>
+
+      <!-- Envelope overlay -->
+      <div class="envelope-wrap" id="envelopeWrap" aria-hidden="false">
+        <div class="envelope" id="envelope">
+          <div class="env-body"></div>
+          <div class="env-flap"></div>
+          <div class="env-back"></div>
+
+          <div class="env-card" id="envCard">
+            <!-- A mini version of the greeting inside the envelope -->
+            <h2
+              style="
+                font-family: Great Vibes, cursive;
+                margin: 0;
+                color: var(--rose);
+                font-size: 34px;
+              "
+            >
+              Gửi đến em
+            </h2>
+            <p style="margin: 6px 0 0 0; color: #6b4b3a">
+              Chúc em 20/10 thật hạnh phúc
+            </p>
+          </div>
+
+          <div class="seal" id="seal" title="Nhấn Bắt đầu để mở thư">
+            <div class="heart"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- central greeting card (main) -->
+      <div class="card" id="card">
+        <h1 class="title">Gửi đến em</h1>
+        <p class="subtitle">Chúc em 20/10 thật hạnh phúc</p>
+
+        <div class="message" id="message"></div>
+
+        <div class="signature" id="signature">...Người luôn yêu em...</div>
+      </div>
+
+      <button id="startBtn">Bắt đầu ❤️</button>
+    </div>
+
+    <!-- background music -->
+    <audio id="bgm" loop>
+      <source src="nhac.mp3" type="audio/mpeg" />
+    </audio>
+
+    <script>
+      /* ---------- setup canvases & effects (kept from trước) ---------- */
+      const CONFIG = {
+        pastelColors: [
+          "#ffd7e8",
+          "#ffb0d1",
+          "#ffcfe6",
+          "#ffd9a6",
+          "#ff9ccf",
+          "#ffeef8",
+          "#ffecf3",
+        ],
+        heartColors: ["#ff6fa3", "#ff8fc1", "#ffb7d6", "#ff4d8a"],
+        petalColors: ["#ffd7e8", "#ffc0d6", "#ffe6f2", "#ffd9a6"],
+        fireworkColors: ["#ff6fa3", "#ffb0d1", "#ffd27f", "#ffe9f0", "#ff8fc1"],
+        maxHearts: 60,
+        maxPetals: 100,
+        fireworksPerBurst: 26,
+        gravity: 0.03,
+      };
+
+      function rand(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+      function randint(a, b) {
+        return Math.floor(rand(a, b + 1));
+      }
+
+      const cFire = document.getElementById("fireworks");
+      const cHeart = document.getElementById("hearts");
+      const cPetal = document.getElementById("petals");
+      const canvases = [cFire, cHeart, cPetal];
+      const ctxFire = cFire.getContext("2d");
+      const ctxHeart = cHeart.getContext("2d");
+      const ctxPetal = cPetal.getContext("2d");
+
+      function resizeAll() {
+        canvases.forEach((c) => {
+          c.width = innerWidth;
+          c.height = innerHeight;
+        });
+      }
+      window.addEventListener("resize", resizeAll);
+      resizeAll();
+
+      /* Floating Hearts */
+      class FloatingHeart {
+        constructor() {
+          this.reset();
+        }
+        reset() {
+          this.x = rand(0, innerWidth);
+          this.y = innerHeight + rand(20, 200);
+          this.size = rand(16, 30);
+          this.vx = rand(-0.3, 0.3);
+          this.vy = -rand(0.3, 1.0);
+          this.alpha = rand(0.6, 1);
+          this.color =
+            CONFIG.heartColors[Math.floor(rand(0, CONFIG.heartColors.length))];
+          this.angle = rand(0, Math.PI * 2);
+          this.spin = rand(-0.02, 0.02);
+          this.floatTick = rand(0, 1000);
+        }
+        update() {
+          this.x += this.vx + Math.sin(this.floatTick / 40) * 0.2;
+          this.y += this.vy;
+          this.floatTick++;
+          this.angle += this.spin;
+          if (this.y < -60 || this.x < -80 || this.x > innerWidth + 80)
+            this.reset();
+        }
+        draw(ctx) {
+          ctx.save();
+          ctx.globalAlpha = this.alpha;
+          ctx.translate(this.x, this.y);
+          ctx.rotate(this.angle);
+          const s = this.size;
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.moveTo(0, s / 4);
+          ctx.quadraticCurveTo(0, -s / 4, s / 4, -s / 4);
+          ctx.quadraticCurveTo(s / 2, -s / 4, s / 2, s / 4);
+          ctx.quadraticCurveTo(s / 2, s / 2, s / 4, s * 0.7);
+          ctx.lineTo(0, s);
+          ctx.lineTo(-s / 4, s * 0.7);
+          ctx.quadraticCurveTo(-s / 2, s / 2, -s / 2, s / 4);
+          ctx.quadraticCurveTo(-s / 2, -s / 4, -s / 4, -s / 4);
+          ctx.quadraticCurveTo(0, -s / 4, 0, s / 4);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      let hearts = [];
+      for (let i = 0; i < CONFIG.maxHearts; i++)
+        hearts.push(new FloatingHeart());
+
+      /* Petals */
+      class Petal {
+        constructor() {
+          this.reset();
+        }
+        reset() {
+          this.x = rand(0, innerWidth);
+          this.y = rand(-innerHeight, 0);
+          this.size = rand(8, 18);
+          this.vx = rand(-0.6, 0.6);
+          this.vy = rand(0.2, 1.2);
+          this.color =
+            CONFIG.petalColors[Math.floor(rand(0, CONFIG.petalColors.length))];
+          this.rot = rand(0, Math.PI * 2);
+          this.spin = rand(-0.02, 0.02);
+          this.alpha = rand(0.6, 1);
+        }
+        update() {
+          this.vy += CONFIG.gravity * 0.2;
+          this.x += this.vx + Math.sin(this.y / 30) * 0.6;
+          this.y += this.vy;
+          this.rot += this.spin;
+          if (this.y > innerHeight + 50) this.reset();
+        }
+        draw(ctx) {
+          ctx.save();
+          ctx.globalAlpha = this.alpha;
+          ctx.translate(this.x, this.y);
+          ctx.rotate(this.rot);
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.ellipse(0, 0, this.size, this.size * 0.6, 0, 0, Math.PI * 2);
+          ctx.fillStyle = this.color;
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      let petals = [];
+      for (let i = 0; i < CONFIG.maxPetals; i++) petals.push(new Petal());
+
+      /* Fireworks */
+      class FireParticle {
+        constructor(x, y, color) {
+          this.x = x;
+          this.y = y;
+          const speed = rand(1.5, 4.6);
+          const angle = rand(0, Math.PI * 2);
+          this.vx = Math.cos(angle) * speed;
+          this.vy = Math.sin(angle) * speed;
+          this.life = rand(40, 90);
+          this.age = 0;
+          this.color = color;
+          this.size = rand(1.2, 3.4);
+        }
+        update() {
+          this.vy += 0.02;
+          this.x += this.vx;
+          this.y += this.vy;
+          this.age++;
+          return this.age < this.life;
+        }
+        draw(ctx) {
+          const t = 1 - this.age / this.life;
+          ctx.save();
+          ctx.globalAlpha = t;
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      let fireworks = [];
+      function spawnFirework(x, y) {
+        const color =
+          CONFIG.fireworkColors[
+            Math.floor(rand(0, CONFIG.fireworkColors.length))
+          ];
+        for (let i = 0; i < CONFIG.fireworksPerBurst; i++)
+          fireworks.push(new FireParticle(x, y, color));
+      }
+
+      /* Big heart drawing */
+      function drawBigHeart(ctx, cx, cy, size) {
+        const pointCount = Math.min(700, Math.floor(size * 1.8));
+        for (let i = 0; i < pointCount; i++) {
+          let attempts = 0;
+          while (attempts++ < 40) {
+            const rx = rand(-size / 2, size / 2);
+            const ry = rand(-size / 2, size / 2);
+            const sx = rx / (size / 30);
+            const sy = -ry / (size / 30);
+            const v =
+              Math.pow(sx * sx + sy * sy - 1, 3) - sx * sx * sy * sy * sy;
+            if (v <= 0) {
+              const px = cx + rx,
+                py = cy + ry;
+              const s = rand(6, 14);
+              ctx.save();
+              ctx.translate(px, py);
+              ctx.rotate(rand(0, Math.PI * 2));
+              ctx.globalAlpha = rand(0.7, 1.0);
+              ctx.fillStyle =
+                CONFIG.pastelColors[
+                  Math.floor(rand(0, CONFIG.pastelColors.length))
+                ];
+              ctx.beginPath();
+              ctx.moveTo(0, s / 4);
+              ctx.quadraticCurveTo(0, -s / 4, s / 4, -s / 4);
+              ctx.quadraticCurveTo(s / 2, -s / 4, s / 2, s / 4);
+              ctx.quadraticCurveTo(s / 2, s / 2, s / 4, s * 0.7);
+              ctx.lineTo(0, s);
+              ctx.lineTo(-s / 4, s * 0.7);
+              ctx.quadraticCurveTo(-s / 2, s / 2, -s / 2, s / 4);
+              ctx.quadraticCurveTo(-s / 2, -s / 4, -s / 4, -s / 4);
+              ctx.quadraticCurveTo(0, -s / 4, 0, s / 4);
+              ctx.fill();
+              ctx.restore();
+              break;
+            }
+          }
+        }
+      }
+
+      /* Animation loop */
+      let last = 0;
+      function loop(ts) {
+        const dt = ts - last;
+        last = ts;
+
+        ctxFire.fillStyle = "rgba(255,245,248,0.12)";
+        ctxFire.fillRect(0, 0, innerWidth, innerHeight);
+
+        for (let i = fireworks.length - 1; i >= 0; i--)
+          if (!fireworks[i].update()) fireworks.splice(i, 1);
+        fireworks.forEach((p) => p.draw(ctxFire));
+
+        ctxHeart.clearRect(0, 0, innerWidth, innerHeight);
+        hearts.forEach((h) => {
+          h.update();
+          h.draw(ctxHeart);
+        });
+
+        const bigCx = innerWidth * 0.22;
+        const bigCy = innerHeight * 0.42;
+        drawBigHeart(
+          ctxHeart,
+          bigCx,
+          bigCy,
+          Math.min(innerHeight * 0.6, innerWidth * 0.6) / 1
+        );
+
+        ctxPetal.clearRect(0, 0, innerWidth, innerHeight);
+        petals.forEach((p) => {
+          p.update();
+          p.draw(ctxPetal);
+        });
+
+        requestAnimationFrame(loop);
+      }
+
+      /* Typed message content (kept original) */
+      const TEXT_LINES = [
+        "Chúc mừng ngày đặc biệt của em",
+        "",
+        "Hôm nay là một ngày đặc biệt, vì nó thuộc về em - cô gái khiến anh thấy cuộc sống này thật đẹp. Chúc em luôn rạng rỡ, hạnh phúc và bình yên trong từng khoảnh khắc. Nụ cười của em chính là lý do khiến anh muốn cố gắng mỗi ngày.",
+        "",
+        "Chúc em mãi xinh, mãi vui, và luôn giữ nụ cười tươi như ánh nắng ấy nhé. Vì chỉ cần em cười thôi, cả thế giới của anh sẽ sáng rồi.",
+        "",
+        "...Người luôn yêu em...",
+      ];
+
+      function startTypingMessage() {
+        const container = document.getElementById("message");
+        container.innerHTML = "";
+        let i = 0;
+        function nextLine() {
+          if (i >= TEXT_LINES.length) return;
+          const line = TEXT_LINES[i];
+          if (line.trim() === "") {
+            const br = document.createElement("p");
+            br.innerHTML = "&nbsp;";
+            container.appendChild(br);
+            i++;
+            setTimeout(nextLine, 200);
+            return;
+          }
+          const p = document.createElement("p");
+          p.className = i === 0 ? "glow" : "";
+          container.appendChild(p);
+          let j = 0;
+          const speed = 30 + Math.floor(Math.random() * 60);
+          function typeChar() {
+            p.innerHTML += line.charAt(j);
+            j++;
+            if (j < line.length) setTimeout(typeChar, speed);
+            else {
+              i++;
+              setTimeout(nextLine, 400);
+            }
+          }
+          typeChar();
+        }
+        nextLine();
+      }
+
+      /* corner hearts decorative (DOM) */
+      (function createCornerHearts() {
+        const colors = ["#ffd7e8", "#ffb0d1", "#ffcfe6"];
+        for (let a = 0; a < 6; a++) {
+          const el = document.createElement("div");
+          el.className = "corner-heart";
+          el.style.left = `${rand(6, 92)}%`;
+          el.style.top = `${rand(6, 92)}%`;
+          el.style.opacity = rand(0.6, 0.95);
+          el.style.transform = `rotate(${rand(-20, 20)}deg)`;
+          el.style.zIndex = 40;
+          el.style.pointerEvents = "none";
+          el.innerHTML = `<svg width="18" height="16" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-10-7.1C-0.5 9 3 4 6.5 5.1c1.9.6 3 2.6 5.5 2.6s3.6-2 5.5-2.6C21 4 24.5 9 22 13.9 19.5 16.4 12 21 12 21z" fill="${
+            colors[Math.floor(rand(0, colors.length))]
+          }" /></svg>`;
+          document.body.appendChild(el);
+        }
+      })();
+
+      /* Start / Envelope logic */
+      const startBtn = document.getElementById("startBtn");
+      const bgm = document.getElementById("bgm");
+      const envelope = document.getElementById("envelope");
+      const envelopeWrap = document.getElementById("envelopeWrap");
+      const card = document.getElementById("card");
+      const seal = document.getElementById("seal");
+
+      function revealCardAndEffects() {
+        // show card and start effects
+        card.classList.add("visible");
+
+        // play music
+        bgm.play().catch(() => {});
+
+        // spawn initial fireworks and start loops
+        for (let i = 0; i < 3; i++) {
+          setTimeout(
+            () =>
+              spawnFirework(
+                rand(innerWidth * 0.25, innerWidth * 0.75),
+                rand(innerHeight * 0.12, innerHeight * 0.45)
+              ),
+            i * 220
+          );
+        }
+        window._fwTimer = setInterval(
+          () =>
+            spawnFirework(
+              rand(innerWidth * 0.25, innerWidth * 0.85),
+              rand(innerHeight * 0.08, innerHeight * 0.45)
+            ),
+          1800
+        );
+
+        // start visual loop
+        requestAnimationFrame(loop);
+        // clicking page spawns firework where clicked
+        document.addEventListener("click", (e) =>
+          spawnFirework(e.clientX, e.clientY)
+        );
+        startTypingMessage();
+      }
+
+      function animateEnvelopeOpenThenStart() {
+        // animate seal pulse/fade and open flap
+        envelope.classList.add("open");
+        // small pop effect on envelope
+        envelope.style.transform = "scale(1.02)";
+        setTimeout(() => (envelope.style.transform = "scale(1)"), 300);
+
+        // after flap open, reveal card then hide envelope overlay (delay tuned for smoothness)
+        setTimeout(() => {
+          // reveal card & effects
+          revealCardAndEffects();
+        }, 700);
+
+        // hide envelope after card visible
+        setTimeout(() => {
+          envelopeWrap.style.transition =
+            "opacity .5s ease, transform .6s ease";
+          envelopeWrap.style.opacity = "0";
+          envelopeWrap.style.transform = "translate(-50%,-45%) scale(.98)";
+          // keep pointer-events none and aria-hidden true
+          envelopeWrap.setAttribute("aria-hidden", "true");
+        }, 1300);
+      }
+
+      // Start button triggers envelope open animation then full activation
+      startBtn.addEventListener("click", () => {
+        // keep start button but fade it out
+        startBtn.style.opacity = "0";
+        startBtn.style.pointerEvents = "none";
+        // small stamp wobble when pressed
+        seal.style.transform = "translate(-50%,-6%) scale(.9) rotate(-8deg)";
+        setTimeout(
+          () =>
+            (seal.style.transform =
+              "translate(-50%,-6%) scale(1) rotate(0deg)"),
+          220
+        );
+        // animate envelope open then start
+        animateEnvelopeOpenThenStart();
+      });
+
+      // Also, allow clicking the envelope area (seal) to open if user prefers.
+      seal.addEventListener("click", (e) => {
+        // Prevent double-trigger if already opened
+        if (envelope.classList.contains("open")) return;
+        // hide start button if still visible
+        startBtn.style.opacity = "0";
+        startBtn.style.pointerEvents = "none";
+        animateEnvelopeOpenThenStart();
+      });
+
+      // Clean up timer on unload
+      window.addEventListener("beforeunload", () => {
+        clearInterval(window._fwTimer);
+      });
+
+      // Resize safety: ensure canvases match viewport
+      window.addEventListener("resize", () => {
+        resizeAll();
+      });
+
+      // End of script
+    </script>
+  </body>
+</html>
